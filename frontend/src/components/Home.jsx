@@ -5,7 +5,6 @@ import { Offcanvas, ListGroup, Button, Container, Row, Col, Dropdown, Modal } fr
 import { FaChevronDown, FaSignOutAlt } from 'react-icons/fa';
 import axios from "axios";
 import AuthWrapper from "./AuthWrapper";
-import { useSocket } from './SocketProvider';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -16,9 +15,9 @@ function Home() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
-  const socket = useSocket();
 
   useEffect(() => {
+    // Récupérer les informations de l'utilisateur connecté
     axios.get(`${apiUrl}/api/auth/whoami`, { withCredentials: true })
       .then(res => {
         if (res.data.Status === "Success") {
@@ -27,16 +26,17 @@ function Home() {
       })
       .catch(err => {
         console.error('Erreur lors de la récupération du statut d\'authentification:', err);
+        navigate('/login'); // Redirige vers login si l'utilisateur n'est pas authentifié
       });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
+    // Récupérer la liste des techniques
     axios.get(`${apiUrl}/api/techniques`, { withCredentials: true })
       .then(res => {
         setTechniques(res.data);
         if (res.data.length > 0) {
-          const defaultTechnique = res.data[0];
-          setSelectedTechnique(defaultTechnique);
+          setSelectedTechnique(res.data[0]);
         }
       })
       .catch(err => {
@@ -56,16 +56,12 @@ function Home() {
     axios.post(`${apiUrl}/api/auth/logout`, {}, { withCredentials: true })
       .then(res => {
         if (res.data.Status === "Success") {
-          if (socket) {
-            socket.emit('logout'); // Emit logout event to the server
-            socket.disconnect(); // Disconnect the socket connection
-          }
-          navigate('/login');
+          navigate('/login'); // Redirige vers la page de connexion
         } else {
-          console.log("Erreur lors de la déconnexion");
+          console.error("Erreur lors de la déconnexion");
         }
       })
-      .catch(err => console.log(err));
+      .catch(err => console.error("Erreur lors de la déconnexion :", err));
   };
 
   const cancelLogout = () => {
@@ -84,6 +80,7 @@ function Home() {
     <AuthWrapper>
       <div className="d-flex flex-column" style={{ backgroundColor: '#000235', minHeight: '100vh' }}>
         <Container fluid className="d-flex flex-column" style={{ flexGrow: 1 }}>
+          {/* Header */}
           <Row className="text-white p-3 align-items-center">
             <Col xs={12} md={4} className="d-flex align-items-center justify-content-start">
               <div className="d-flex flex-column align-items-start">
@@ -115,6 +112,8 @@ function Home() {
               <img src="/assets/logofulljjb.png" alt="logo" className="img-fluid" style={{ height: '50px' }} />
             </Col>
           </Row>
+
+          {/* Sidebar Offcanvas */}
           <Offcanvas show={showOffcanvas} onHide={toggleOffcanvas} placement="start" style={{ backgroundColor: '#000235', marginTop: '95px', height: 'calc(100% - 80px)', width: '250px' }}>
             <Offcanvas.Header style={{ backgroundColor: '#000235' }}>
               <Offcanvas.Title style={{ color: 'white' }}>Techniques</Offcanvas.Title>
@@ -134,27 +133,31 @@ function Home() {
               </ListGroup>
             </Offcanvas.Body>
           </Offcanvas>
+
+          {/* Main Content */}
           <Row className="flex-grow-1">
-            <Col xs={12} className='d-flex flex-column gap-3 align-items-center'>
+            <Col xs={12} className="d-flex flex-column gap-3 align-items-center">
               {selectedTechnique && (
-                <div className='card text-white mb-3' style={{ backgroundColor: '#000235', width: '100%', maxWidth: '800px', border: '3px solid white' }}>
-                  <div className='card-header text-center'>
+                <div className="card text-white mb-3" style={{ backgroundColor: '#000235', width: '100%', maxWidth: '800px', border: '3px solid white' }}>
+                  <div className="card-header text-center">
                     <h5>{selectedTechnique.title}</h5>
                   </div>
-                  <div className='card-body'>
+                  <div className="card-body">
                     {selectedTechnique.videoUrl && (
-                      <video key={selectedTechnique.videoUrl} controls className='img-fluid mb-3' style={{ width: '100%', height: 'auto', objectFit: 'cover', maxHeight: '400px' }}>
+                      <video key={selectedTechnique.videoUrl} controls className="img-fluid mb-3" style={{ width: '100%', height: 'auto', objectFit: 'cover', maxHeight: '400px' }}>
                         <source src={selectedTechnique.videoUrl} type="video/mp4" />
                         Votre navigateur ne supporte pas la balise vidéo.
                       </video>
                     )}
-                    <h3 className='card-title text-center'>{selectedTechnique.title}</h3>
-                    <p className='card-text'>{selectedTechnique.description}</p>
+                    <h3 className="card-title text-center">{selectedTechnique.title}</h3>
+                    <p className="card-text">{selectedTechnique.description}</p>
                   </div>
                 </div>
               )}
             </Col>
           </Row>
+
+          {/* Admin Section */}
           {isAdmin && (
             <Row className="d-flex justify-content-center mb-5" style={{ padding: '20px' }}>
               <Col className="d-flex justify-content-center">
@@ -164,6 +167,7 @@ function Home() {
           )}
         </Container>
 
+        {/* Logout Modal */}
         <Modal show={showLogoutModal} onHide={cancelLogout}>
           <Modal.Header closeButton>
             <Modal.Title>Confirmation de déconnexion</Modal.Title>
@@ -179,6 +183,7 @@ function Home() {
           </Modal.Footer>
         </Modal>
         
+        {/* Footer */}
         <footer className="text-white" style={{ backgroundColor: 'rgba(7, 1, 8, 0.96)', padding: '20px 0' }}>
           <Container>
             <Row>
@@ -192,7 +197,7 @@ function Home() {
                 <h5>Liens Utiles</h5>
                 <ul className="list-unstyled">
                   <li><a href="#" className="text-decoration-none text-white">FAQ</a></li>
-                  <li><Link to="/politique" className="text-decoration-none text-white">Politique de Confidentialité</Link></li> {/* Lien vers Politique de Confidentialité */}
+                  <li><Link to="/politique" className="text-decoration-none text-white">Politique de Confidentialité</Link></li>
                 </ul>
               </Col>
             </Row>

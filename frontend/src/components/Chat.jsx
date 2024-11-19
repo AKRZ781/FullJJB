@@ -1,199 +1,232 @@
-import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { useSocket } from './SocketProvider';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import { initializeSocket, disconnectSocket, getSocket } from "../socket"; // Utilisation directe des fonctions socket
+import { useNavigate } from "react-router-dom";
 
-function Chat() {
+const Chat = () => {
   const [auth, setAuth] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
   const [currentUser, setCurrentUser] = useState({});
   const [users, setUsers] = useState([]);
-  const [typing, setTyping] = useState(false); // Nouvel état pour gérer "en train d'écrire"
-  const [isTyping, setIsTyping] = useState(false); // État pour les autres utilisateurs "en train d'écrire"
+  const [typing, setTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const messageEndRef = useRef(null);
-  const socket = useSocket();
   const navigate = useNavigate();
+  let socket;
 
   useEffect(() => {
-    fetchAuthStatus();
-  }, [socket]);
-
-  useEffect(() => {
-    if (auth) {
-      fetchMessages();
+    const token = getTokenFromCookie("token");
+    if (!token) {
+      console.warn("Token introuvable dans les cookies.");
+      setTimeout(() => {
+        navigate("/login"); // Redirection avec un délai de 2 secondes
+      }, 2000);
+      return;
     }
-  }, [auth]);
 
-  useEffect(() => {
+    // Initialise le socket après la vérification de l'authentification
+    socket = initializeSocket(token);
+    console.log("initialisation",socket);
+    
+
     if (socket) {
-      socket.on('new_chat_message', (msg) => {
-        setMessages(prevMessages => {
-          const messageExists = prevMessages.some(m => m.id === msg.id);
-          if (!messageExists) {
-            return [...prevMessages, msg];
-          }
-          return prevMessages;
-        });
-        scrollToEnd();
-      });
+    // Émission de la requête pour récupérer les anciens messages
+    socket.emit("fetch_messages");
 
-      socket.on('message_deleted', (msgId) => {
-        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== msgId));
-      });
+    // Écoute de la réponse du serveur avec les messages
+    socket.on("previous_messages", (messages) => {
+      setMessages(messages);
+      scrollToEnd();
+    });}
 
-      // Gérer l'état "en train d'écrire"
-      socket.on('typing', (user) => {
-        if (user.id !== currentUser.id) {
-          setIsTyping(true);
-        }
-      });
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+    });
 
-      socket.on('stop_typing', (user) => {
-        if (user.id !== currentUser.id) {
-          setIsTyping(false);
-        }
-      });
+    socket.on("new_chat_message", (msg) => {
+      setMessages((prevMessages) => [...prevMessages, msg]);
+      scrollToEnd();
+    });
 
-      return () => {
-        socket.off('new_chat_message');
-        socket.off('message_deleted');
-        socket.off('typing');
-        socket.off('stop_typing');
-      };
-    }
-  }, [socket]);
+    socket.on("message_deleted", (msgId) => {
+      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== msgId));
+    });
+
+    socket.on("typing", (user) => {
+      if (user.id !== currentUser.id) {
+        setIsTyping(true);
+      }
+    });
+
+    socket.on("stop_typing", (user) => {
+      if (user.id !== currentUser.id) {
+        setIsTyping(false);
+      }
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error.message);
+      setMessage("Erreur de connexion au chat.");
+      navigate("/login");
+    });
+
+    fetchAuthStatus();
+
+    return () => {
+      // Nettoyage des événements et déconnexion propre
+      if (socket) {
+        socket.off("new_chat_message");
+        socket.off("message_deleted");
+        socket.off("typing");
+        socket.off("stop_typing");
+        socket.off("previous_messages");
+        socket.off("fetch_error");
+        disconnectSocket();
+      }
+    };
+  }, []);
+
+  const getTokenFromCookie = (cookieName) => {
+    const cookie = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith(`${cookieName}=`));
+    console.log("Cookie trouvé:", cookie);
+    return cookie ? cookie.split("=")[1] : null;
+  };
 
   const fetchAuthStatus = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/whoami`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/whoami`, {
+        withCredentials: true,
+      });
       if (res.data.Status === "Success") {
         setAuth(true);
         setCurrentUser(res.data.User);
         fetchUsers();
+        fetchMessages();
       } else {
         setAuth(false);
         setMessage(res.data.Error);
       }
     } catch (err) {
-      if (err.response && err.response.status === 401 && err.response.data.error === "Token expired") {
-        try {
-          await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/refresh-token`, {}, { withCredentials: true });
-          await fetchAuthStatus();
-        } catch (refreshErr) {
-          setMessage('Failed to refresh token');
-        }
-      } else {
-        setMessage('Failed to fetch authentication status.');
-      }
+      console.error("Error fetching authentication status:", err);
+      setMessage("Erreur d'authentification.");
+      navigate("/login");
     }
   };
 
-  const fetchMessages = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/chat/chat-messages`, { withCredentials: true });
-      if (res.data.Status === "Success") {
-        setMessages(res.data.Messages);
-        scrollToEnd();
-      } else {
-        setMessage('Failed to load chat messages');
-      }
-    } catch (err) {
-      setMessage('Error fetching chat messages');
-    }
+ const fetchMessages = () => {
+  const socket = getSocket(); // Récupérer l'instance socket
+  if (!socket) {
+    console.error("Socket non initialisé.");
+    setMessage("Erreur : connexion au serveur perdue.");
+    return;
+  }
+
+  // Émettre une requête pour récupérer les messages
+  socket.emit("fetch_messages");
+
+  // Écouter les messages envoyés par le serveur
+  socket.on("previous_messages", (messages) => {
+    setMessages(messages);
+    scrollToEnd();
+  });
+
+  // Gérer les erreurs éventuelles
+  socket.on("fetch_error", (error) => {
+    console.error("Erreur lors de la récupération des messages :", error);
+    setMessage("Erreur lors de la récupération des messages.");
+  });
+
+  // Nettoyage des écouteurs lors du démontage
+  return () => {
+    socket.off("previous_messages");
+    socket.off("fetch_error");
   };
+};
+
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`, { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/users`, {
+        withCredentials: true,
+      });
       if (res.data.Status === "Success") {
         setUsers(res.data.Users);
       } else {
-        setMessage('Failed to load users');
+        setMessage("Erreur de chargement des utilisateurs.");
       }
     } catch (err) {
-      setMessage('Error fetching users');
+      console.error("Error fetching users:", err);
+      setMessage("Erreur de chargement des utilisateurs.");
     }
   };
 
   const handleNewMessageChange = (e) => {
     setNewMessage(e.target.value.slice(0, 200));
+    const socket = getSocket();
     if (!typing) {
       setTyping(true);
-      socket.emit('typing', currentUser);
+      socket.emit("typing", currentUser);
     }
-    clearTimeout(typingTimeout);
+    
     const typingTimeout = setTimeout(() => {
       setTyping(false);
-      socket.emit('stop_typing', currentUser);
+      socket.emit("stop_typing", currentUser);
     }, 1000);
+    clearTimeout(typingTimeout);
   };
 
-  const handleNewMessageSubmit = async (e) => {
+  const handleNewMessageSubmit = (e) => {
+    console.log("BLALALAsubmitLALALAL");
     e.preventDefault();
-    if (!newMessage.trim() || isSubmitting) return;
-    setIsSubmitting(true);
-
-    const messageData = { message: newMessage };
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/chat/chat-messages`, messageData, { withCredentials: true });
-      if (res.data.Status === "Success") {
-        if (socket) {
-          socket.emit('new_message', res.data.Message);
-        }
-        setNewMessage('');
-        setTyping(false);
-        socket.emit('stop_typing', currentUser);
-      } else {
-        setMessage('Failed to send message');
-      }
-    } catch (err) {
-      setMessage('Error sending message');
-    } finally {
-      setIsSubmitting(false);
+    if (!newMessage.trim()) return;
+    const socket = getSocket();
+    console.log("socket",socket);
+    
+    // Envoi du message via Socket.IO
+    if (socket) {
+      socket.emit("create_message", { message: newMessage });
+      setNewMessage("");
+    } else {
+      setMessage("Erreur : connexion au serveur perdue.");
+      console.error("Socket non initialisé.");
     }
   };
 
   const handleDeleteMessage = async (messageId) => {
+    const socket = getSocket();
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
-      try {
-        const res = await axios.delete(`${import.meta.env.VITE_API_URL}/api/chat/chat-messages/${messageId}`, { withCredentials: true });
-        if (res.data.Status === "Success") {
-          setMessages(prevMessages => prevMessages.filter(msg => msg.id !== messageId));
-          if (socket) {
-            socket.emit('delete_message', messageId);
-          }
-        } else {
-          setMessage('Failed to delete message');
-        }
-      } catch (err) {
-        setMessage('Error deleting message');
+      if (socket) {
+        // Émettre l'événement de suppression au serveur via Socket.IO
+        socket.emit("delete_message", messageId);
+  
+        // Suppression optimiste : mettre à jour immédiatement les messages locaux
+        setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== messageId));
+      } else {
+        console.error("Socket non initialisé.");
+        setMessage("Impossible de supprimer le message (socket non connecté).");
       }
     }
   };
 
-  const handleAccessTechniques = () => {
-    navigate('/home');
-  };
-
   const scrollToEnd = () => {
     setTimeout(() => {
-      messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
   };
 
   return (
-    <div className="container-fluid d-flex min-vh-100 p-0" style={{ backgroundColor: '#000235', color: 'white' }}>
+    <div className="container-fluid d-flex min-vh-100 p-0" style={{ backgroundColor: "#000235", color: "white" }}>
       <div className="d-flex flex-grow-1">
-        <div className="bg-dark text-white p-4" style={{ width: '250px', minWidth: '250px' }}>
+        <div className="bg-dark text-white p-4" style={{ width: "250px", minWidth: "250px" }}>
           <h3>Membres de la Communauté</h3>
           <ul className="list-group">
-            {users.map(user => (
+            {users.map((user) => (
               <li key={user.id} className="list-group-item bg-dark text-white">
-                {user.name || 'Unknown'}
+                {user.name || "Utilisateur inconnu"}
               </li>
             ))}
           </ul>
@@ -204,27 +237,27 @@ function Chat() {
             {auth ? (
               <div className="bg-dark text-white rounded p-4">
                 <div className="border p-3 rounded bg-secondary">
-                  <div className="mb-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                    {messages.map(msg => {
-                      return (
-                        <div key={msg.id} className="d-flex align-items-center mb-3">
-                          <div className="p-3 rounded bg-dark text-white" style={{ backgroundColor: '#dc3545', flexGrow: 1, maxWidth: '70%' }}>
-                            <p className="mb-1"><strong>{msg.sender?.id === currentUser.id ? 'Moi' : msg.sender?.name || 'Unknown'}</strong></p>
-                            <p className="mb-0">{msg.message}</p>
-                          </div>
-                          {currentUser.role === 'admin' && (
-                            <button onClick={() => handleDeleteMessage(msg.id)} className="btn btn-danger btn-sm ml-2">
-                              &times;
-                            </button>
-                          )}
+                  <div className="mb-3" style={{ maxHeight: "300px", overflowY: "auto" }}>
+                    {messages.map((msg) => (
+                      <div key={msg.id} className="d-flex align-items-center mb-3">
+                        <div className="p-3 rounded bg-dark text-white">
+                          <p className="mb-1">
+                            <strong>{msg.sender?.id === currentUser.id ? "Moi" : msg.sender?.name || "Utilisateur inconnu"}</strong>
+                          </p>
+                          <p className="mb-0">{msg.message}</p>
                         </div>
-                      );
-                    })}
-                    {isTyping && (
-                      <div className="text-white">
-                        <em>Un utilisateur est en train d'écrire...</em>
+                        {/* Si l'utilisateur est un administrateur, afficher le bouton de suppression */}
+                        {currentUser.role === "admin" && (
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="btn btn-danger btn-sm ml-2"
+                          >
+                            &times;
+                          </button>
+                        )}
                       </div>
-                    )}
+                    ))}
+                    {isTyping && <em>Un utilisateur est en train d'écrire...</em>}
                     <div ref={messageEndRef} />
                   </div>
                   <form onSubmit={handleNewMessageSubmit}>
@@ -235,28 +268,29 @@ function Chat() {
                         className="form-control bg-dark text-white"
                         placeholder="Écrire un message..."
                         required
-                        style={{ resize: 'none' }}
-                      ></textarea>
-                      <button type="submit" className="btn" style={{ backgroundColor: '#dc3545', color: 'white' }}>Envoyer</button>
+                      />
+                      <button type="submit" className="btn btn-primary">Envoyer</button>
                     </div>
                   </form>
                 </div>
+                <div className="mt-3">
+                  <button
+                    className="btn bg-dark text-white border-light"
+                    onClick={() => navigate("/home")}
+                  >
+                    Retour aux techniques
+                  </button>
+                </div>
               </div>
+              
             ) : (
-              <div className="text-center">
-                <h3>{message}</h3>
-              </div>
+              <p>{message || "Veuillez vous connecter pour accéder au chat."}</p>
             )}
-          </div>
-          <div className="container mt-3">
-            <button type="button" className="btn btn-dark ms-3" onClick={handleAccessTechniques}>
-              Accéder aux Techniques
-            </button>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default Chat;

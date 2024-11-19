@@ -1,7 +1,6 @@
-// models/chatMessageModel.js
 import { DataTypes } from 'sequelize';
 import db from '../config/db.js';
-import User from './userModel.js'; // Assurez-vous que le chemin est correct
+import User from './userModel.js'; 
 
 const ChatMessage = db.define('ChatMessage', {
   id: {

@@ -10,8 +10,8 @@ function AdminTechnique() {
   const [videoFile, setVideoFile] = useState(null);
   const [errors, setErrors] = useState({});
   const [techniques, setTechniques] = useState([]);
-  const [editMode, setEditMode] = useState(false); // Indicateur de mode d'édition
-  const [editId, setEditId] = useState(null); // ID de la technique en cours d'édition
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState(null);
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -29,50 +29,36 @@ function AdminTechnique() {
     };
 
     fetchTechniques();
-  }, []);
+  }, [apiUrl]);
 
   const handleAdminTechnique = async () => {
     const newErrors = {};
     if (!title.trim()) newErrors.title = 'Le titre est requis.';
     if (!description.trim()) newErrors.description = 'La description est requise.';
     if (description.length > maxDescriptionLength) newErrors.description = `La description doit contenir au maximum ${maxDescriptionLength} caractères.`;
-    if (!editMode && !videoFile) newErrors.videoFile = 'La vidéo est requise.'; // Validation pour le champ vidéo
+    if (!editMode && !videoFile) newErrors.videoFile = 'La vidéo est requise.';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    if (!window.confirm('Êtes-vous sûr de vouloir ajouter/modifier cette technique ?')) {
-      return;
-    }
-
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    if (videoFile) {
-      formData.append('video', videoFile);
-    } else if (!editMode) {
-      newErrors.videoFile = 'La vidéo est requise.';
-      setErrors(newErrors);
-      return;
-    }
+    if (videoFile) formData.append('video', videoFile);
 
     try {
       let res;
       if (editMode) {
         res = await axios.put(`${apiUrl}/api/techniques/${editId}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          withCredentials: true
+          headers: { 'Content-Type': 'multipart/form-data' },
+          withCredentials: true,
         });
       } else {
         res = await axios.post(`${apiUrl}/api/techniques`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          withCredentials: true
+          headers: { 'Content-Type': 'multipart/form-data' },
+          withCredentials: true,
         });
       }
 
@@ -84,14 +70,12 @@ function AdminTechnique() {
         fileInputRef.current.value = '';
         setErrors({});
         if (editMode) {
-          setTechniques(techniques.map(tech => tech.id === editId ? res.data.Data : tech));
+          setTechniques(techniques.map((tech) => (tech.id === editId ? res.data.Data : tech)));
           setEditMode(false);
           setEditId(null);
         } else {
           setTechniques([...techniques, res.data.Data]);
         }
-      } else {
-        console.error('Erreur lors de l\'ajout/mise à jour de la technique:', res.data);
       }
     } catch (err) {
       console.error('Erreur lors de l\'ajout/mise à jour de la technique:', err);
@@ -105,7 +89,7 @@ function AdminTechnique() {
 
     try {
       await axios.delete(`${apiUrl}/api/techniques/${id}`, { withCredentials: true });
-      setTechniques(techniques.filter(technique => technique.id !== id));
+      setTechniques(techniques.filter((technique) => technique.id !== id));
       alert('Technique supprimée avec succès.');
     } catch (error) {
       console.error('Erreur lors de la suppression de la technique:', error);
@@ -117,7 +101,7 @@ function AdminTechnique() {
     setDescription(technique.description);
     setEditMode(true);
     setEditId(technique.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Scroll to the top of the page for editing
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleAccessTechniques = () => {
@@ -131,41 +115,63 @@ function AdminTechnique() {
         <form>
           <div className="mb-3">
             <label htmlFor="title" className="form-label">Titre</label>
-            <input type="text" className="form-control" id="title" value={title} onChange={e => setTitle(e.target.value)} />
+            <input
+              type="text"
+              className="form-control"
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
             {errors.title && <div className="text-danger">{errors.title}</div>}
           </div>
           <div className="mb-3">
             <label htmlFor="description" className="form-label">Description</label>
-            <textarea className="form-control" id="description" value={description} onChange={e => setDescription(e.target.value)} maxLength={maxDescriptionLength}></textarea>
+            <textarea
+              className="form-control"
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={maxDescriptionLength}
+            ></textarea>
             <div>{description.length}/{maxDescriptionLength} caractères</div>
             {errors.description && <div className="text-danger">{errors.description}</div>}
           </div>
           <div className="mb-3">
             <label htmlFor="video" className="form-label">Vidéo</label>
-            <input type="file" className="form-control" id="video" onChange={e => setVideoFile(e.target.files[0])} ref={fileInputRef} />
+            <input
+              type="file"
+              className="form-control"
+              id="video"
+              onChange={(e) => setVideoFile(e.target.files[0])}
+              ref={fileInputRef}
+            />
             {editMode && <div className="form-text text-white">Laissez ce champ vide pour conserver la vidéo actuelle.</div>}
             {errors.videoFile && <div className="text-danger">{errors.videoFile}</div>}
           </div>
-          <button type="button" className="btn btn-dark" onClick={handleAdminTechnique}>{editMode ? 'Mettre à jour' : 'Ajouter'}</button>
-          <button type="button" className="btn btn-dark ms-3" onClick={handleAccessTechniques}>Accéder aux Techniques</button>
+          <button type="button" className="btn btn-dark" onClick={handleAdminTechnique}>
+            {editMode ? 'Mettre à jour' : 'Ajouter'}
+          </button>
+          <button type="button" className="btn btn-dark ms-3" onClick={handleAccessTechniques}>
+            Retour aux Techniques
+          </button>
         </form>
 
         <div className="mt-5">
           <h2>Liste des Techniques</h2>
-          <table style={{ width: '100%', backgroundColor: '#000235', color: 'white', borderCollapse: 'collapse', border: '2px solid white' }}>
+          <table className="table table-dark table-striped">
             <thead>
-              <tr style={{ backgroundColor: '#000235', color: 'white' }}>
-                <th style={{ border: '2px solid white', padding: '8px' }}>#</th>
-                <th style={{ border: '2px solid white', padding: '8px' }}>Titre</th>
-                <th style={{ border: '2px solid white', padding: '8px' }}>Action</th>
+              <tr>
+                <th>#</th>
+                <th>Titre</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {techniques.map((technique, index) => (
-                <tr key={technique.id} style={{ border: '2px solid white' }}>
-                  <td style={{ border: '2px solid white', padding: '8px' }}>{index + 1}</td>
-                  <td style={{ border: '2px solid white', padding: '8px' }}>{technique.title}</td>
-                  <td style={{ border: '2px solid white', padding: '8px' }}>
+                <tr key={technique.id}>
+                  <td>{index + 1}</td>
+                  <td>{technique.title}</td>
+                  <td>
                     <button className="btn btn-danger me-2" onClick={() => handleDeleteTechnique(technique.id)}>
                       <FaTimes />
                     </button>
