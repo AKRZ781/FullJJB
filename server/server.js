@@ -28,7 +28,7 @@ db.sync({ alter: true })
 
 // Middleware de compression (exclut les vidéos)
 app.use((req, res, next) => {
-  if (req.url.startsWith('/videos/')) {
+  if (req.url.startsWith('/video/')) {
     return next(); // Ignore compression pour les vidéos
   }
   compression()(req, res, next); // Compression pour les autres réponses
@@ -46,9 +46,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Route pour servir les vidéos
-app.get('/videos/:filename', (req, res) => {
+app.get('/video/:filename', (req, res) => {
   const filename = req.params.filename;
-  const filepath = path.join(__dirname, 'public/videos', filename);
+  const filepath = path.join(__dirname, 'public/video', filename);
 
   if (!fs.existsSync(filepath)) {
     return res.status(404).send('Vidéo non trouvée');

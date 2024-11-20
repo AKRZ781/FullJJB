@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Définir le répertoire de stockage des vidéos
-const storageDir = path.join(__dirname, '../../frontend/public/videos'); // Assurez-vous que le chemin est correct
+const storageDir = path.join(__dirname, '../../frontend/public/video'); // Assurez-vous que le chemin est correct
 
 // Vérifier si le répertoire existe, sinon le créer
 if (!fs.existsSync(storageDir)) {

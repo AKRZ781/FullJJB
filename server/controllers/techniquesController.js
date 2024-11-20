@@ -40,7 +40,7 @@ const createTechnique = [
     }
 
     const { title, description } = req.body;
-    const videoUrl = req.file ? `/videos/${req.file.filename}` : null; // Chemin de la vidéo
+    const videoUrl = req.file ? `/video/${req.file.filename}` : null; // Chemin de la vidéo
 
     try {
       const newTechnique = await Technique.create({ title, description, videoUrl });
@@ -60,7 +60,7 @@ const updateTechnique = [
   async (req, res) => {
     const { id } = req.params;
     const { title, description } = req.body;
-    const videoUrl = req.file ? `/videos/${req.file.filename}` : undefined;
+    const videoUrl = req.file ? `/video/${req.file.filename}` : undefined;
 
     try {
       const technique = await Technique.findByPk(id);
