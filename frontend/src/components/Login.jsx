@@ -13,12 +13,16 @@ function Login() {
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
+
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!values.email || !values.password) {
       setErrorMessage('Veuillez remplir tous les champs.');
       return;
     }
+    console.log('Valeur de VITE_API_URL:', import.meta.env.VITE_API_URL);
+    console.log('URL utilisée pour la requête:', `${apiUrl}/api/auth/login`);
+
     axios
       .post(`${apiUrl}/api/auth/login`, values, { withCredentials: true })
       .then((res) => {

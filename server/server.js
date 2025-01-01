@@ -1,3 +1,4 @@
+// server.js
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -6,7 +7,9 @@ import compression from 'compression';
 import authRoutes from './routes/authRoutes.js';
 import techniquesRoutes from './routes/techniquesRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import adminRoutes from './routes/adminRoutes.js'; // Import des routes admin
 import db from './config/db.js';
+import createAdminUser from './config/createAdminUser.js'; // Import création admin
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
@@ -22,16 +25,18 @@ db.authenticate()
   .then(() => console.log('Database connected...'))
   .catch(err => console.error('Unable to connect to the database:', err));
 
+// Synchronisation de la base de données et création de l'administrateur
 db.sync({ alter: true })
-  .then(() => console.log('Database synchronized...'))
+  .then(async () => {
+    console.log('Database synchronized...');
+    await createAdminUser();
+  })
   .catch(err => console.error('Error synchronizing the database:', err));
 
-// Middleware de compression (exclut les vidéos)
+// Middleware de compression
 app.use((req, res, next) => {
-  if (req.url.startsWith('/video/')) {
-    return next(); // Ignore compression pour les vidéos
-  }
-  compression()(req, res, next); // Compression pour les autres réponses
+  if (req.url.startsWith('/video/')) return next(); // Ignore compression pour les vidéos
+  compression()(req, res, next); // Compression pour le reste
 });
 
 // Autres middlewares
@@ -50,15 +55,13 @@ app.get('/video/:filename', (req, res) => {
   const filename = req.params.filename;
   const filepath = path.join(__dirname, 'public/video', filename);
 
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).send('Vidéo non trouvée');
-  }
+  if (!fs.existsSync(filepath)) return res.status(404).send('Vidéo non trouvée');
 
   res.setHeader('Content-Type', 'video/mp4');
   res.sendFile(filepath);
 });
 
-// Log des cookies et en-têtes (en dev uniquement)
+// Log des cookies et en-têtes (dev uniquement)
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
     console.log('Cookies: ', req.cookies);
@@ -71,7 +74,9 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/techniques', techniquesRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/admin', adminRoutes); // Routes admin ajoutées
 
+// Route racine
 app.get('/', (req, res) => {
   res.send('API is running...');
 });

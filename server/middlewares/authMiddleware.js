@@ -6,8 +6,6 @@ dotenv.config();
 
 export const authenticateToken = async (req, res, next) => {
   const token = req.cookies.token; // Récupère le token dans les cookies
-  console.log("token",token);
-  
   const refreshToken = req.cookies.refreshToken; // Récupère le refreshToken dans les cookies
 
   if (!token) {
@@ -26,7 +24,6 @@ export const authenticateToken = async (req, res, next) => {
         }
 
         try {
-          // Vérification du refreshToken
           const decodedRefresh = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
           const foundUser = await User.findByPk(decodedRefresh.id);
 
@@ -35,18 +32,20 @@ export const authenticateToken = async (req, res, next) => {
             return res.status(401).json({ error: "Utilisateur introuvable." });
           }
 
-          // Génère un nouveau token
           const newToken = jwt.sign(
             { id: foundUser.id, email: foundUser.email, name: foundUser.name, role: foundUser.role },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
           );
 
-          // Définit le nouveau cookie pour le token
-          res.cookie('token', newToken, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax',path: '/' });
+          res.cookie('token', newToken, {
+            httpOnly: false,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Lax',
+            path: '/',
+          });
           req.user = jwt.verify(newToken, process.env.JWT_SECRET); // Ajoute l'utilisateur à la requête
-          console.log('Nouveau token généré après expiration :', newToken);
-          return next(); // Passe au middleware suivant
+          return next();
         } catch (refreshErr) {
           console.error('Erreur lors du rafraîchissement du token :', refreshErr);
           return res.status(401).json({ error: "Refresh token invalide ou expiré." });
@@ -57,8 +56,15 @@ export const authenticateToken = async (req, res, next) => {
       }
     }
 
-    console.log('Token validé, utilisateur :', user);
     req.user = user; // Ajoute l'utilisateur à la requête
-    next(); // Passe au middleware suivant
+    next();
   });
+};
+
+export const isAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    console.log('Accès refusé : rôle utilisateur non-administrateur.');
+    return res.status(403).json({ error: "Accès refusé. Administrateurs uniquement." });
+  }
+  next();
 };

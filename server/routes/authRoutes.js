@@ -9,7 +9,9 @@ router.post('/login', login);
 router.post('/logout', authenticateToken, logout);
 router.post('/refresh-token', refreshToken);
 router.get('/whoami', authenticateToken, whoAmI);
-router.get('/users', authenticateToken, getUsers);
+router.get('/users', authenticateToken, getUsers); // Les utilisateurs normaux peuvent voir la liste avec cette route
 router.get('/confirm/:token', confirmEmail);
 
 export default router;
+
+

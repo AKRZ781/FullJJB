@@ -12,6 +12,9 @@ function AdminTechnique() {
   const [techniques, setTechniques] = useState([]);
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [userErrors, setUserErrors] = useState(null);
+
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
@@ -19,17 +22,42 @@ function AdminTechnique() {
   const apiUrl = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
-    const fetchTechniques = async () => {
+    const checkAdmin = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/api/techniques`, { withCredentials: true });
-        setTechniques(res.data);
+        const res = await axios.get(`${apiUrl}/api/auth/whoami`, { withCredentials: true });
+        if (res.data.User.role !== 'admin') {
+          alert("Accès refusé. Vous n'êtes pas autorisé.");
+          navigate('/home');
+        }
       } catch (error) {
-        console.error('Erreur lors de la récupération des techniques:', error);
+        console.error("Erreur lors de la vérification de l'utilisateur :", error);
+        navigate('/login');
       }
     };
 
+    checkAdmin();
     fetchTechniques();
-  }, [apiUrl]);
+    fetchUsers();
+  }, [apiUrl, navigate]);
+
+  const fetchTechniques = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/api/techniques`, { withCredentials: true });
+      setTechniques(res.data);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des techniques:', error);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${apiUrl}/api/admin/users`, { withCredentials: true });
+      setUsers(res.data.Users);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des utilisateurs:', error);
+      setUserErrors('Impossible de récupérer les utilisateurs.');
+    }
+  };
 
   const handleAdminTechnique = async () => {
     const newErrors = {};
@@ -64,11 +92,7 @@ function AdminTechnique() {
 
       if (res.data.Status === "Success") {
         alert(editMode ? 'Technique mise à jour avec succès.' : 'Technique ajoutée avec succès.');
-        setTitle('');
-        setDescription('');
-        setVideoFile(null);
-        fileInputRef.current.value = '';
-        setErrors({});
+        resetForm();
         if (editMode) {
           setTechniques(techniques.map((tech) => (tech.id === editId ? res.data.Data : tech)));
           setEditMode(false);
@@ -82,10 +106,16 @@ function AdminTechnique() {
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setVideoFile(null);
+    fileInputRef.current.value = '';
+    setErrors({});
+  };
+
   const handleDeleteTechnique = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette technique ?')) {
-      return;
-    }
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette technique ?')) return;
 
     try {
       await axios.delete(`${apiUrl}/api/techniques/${id}`, { withCredentials: true });
@@ -102,6 +132,19 @@ function AdminTechnique() {
     setEditMode(true);
     setEditId(technique.id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteUser = async (id) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
+
+    try {
+      await axios.delete(`${apiUrl}/api/admin/users/${id}`, { withCredentials: true });
+      setUsers(users.filter((user) => user.id !== id));
+      alert('Utilisateur supprimé avec succès.');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'utilisateur:', error);
+      setUserErrors('Une erreur est survenue lors de la suppression de l\'utilisateur.');
+    }
   };
 
   const handleAccessTechniques = () => {
@@ -183,6 +226,38 @@ function AdminTechnique() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="mt-5">
+          <h2>Liste des Utilisateurs</h2>
+          {userErrors && <div className="alert alert-danger">{userErrors}</div>}
+          <table className="table table-dark table-striped">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user, index) => (
+                <tr key={user.id}>
+                  <td>{index + 1}</td>
+                  <td>{user.name}</td>
+                  <td>{user.email}</td>
+                  <td>
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => handleDeleteUser(user.id)}
+                    >
+                      <FaTimes />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {users.length === 0 && <p>Aucun utilisateur disponible.</p>}
         </div>
       </div>
     </div>
