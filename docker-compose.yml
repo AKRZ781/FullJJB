@@ -1,0 +1,46 @@
+services:
+  backend:
+    build: ./server
+    container_name: backend
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./server/.env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fulljjb_network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - fulljjb_network
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - fulljjb_network
+    healthcheck:  # Ajout du healthcheck
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+
+networks:
+  fulljjb_network:
+    driver: bridge
+
+volumes:
+  db_data:

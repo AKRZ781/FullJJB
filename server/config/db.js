@@ -6,28 +6,35 @@ dotenv.config();
 
 const initDatabase = async () => {
   try {
+    // Connexion initiale pour vérifier ou créer la base de données
+    console.log('host:',process.env.DB_HOST);
+    console.log('user:',process.env.MYSQL_USER);
+    console.log('password:',process.env.MYSQL_PASSWORD);
+    console.log('port:',process.env.DB_PORT);
     const connection = await mysql.createConnection({
       host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
+      user: process.env.MYSQL_USER,
+      password: process.env.MYSQL_PASSWORD,
       port: process.env.DB_PORT || 3306,
     });
 
     console.log(`Connexion à MySQL établie sur : ${process.env.DB_HOST}`);
 
-    const dbName = process.env.DB_NAME || 'signup1';
+    const dbName = process.env.MYSQL_DATABASE || 'signup1';
     await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
     console.log(`Base de données "${dbName}" vérifiée ou créée.`);
 
-    const sequelize = new Sequelize(dbName, process.env.DB_USER, process.env.DB_PASS, {
+    // Configuration de Sequelize
+    const sequelize = new Sequelize(dbName, process.env.MYSQL_USER, process.env.MYSQL_PASSWORD, {
       host: process.env.DB_HOST,
       dialect: 'mysql',
       port: process.env.DB_PORT || 3306,
-      logging: false,
+      logging: false, // Mets à true si tu veux afficher les requêtes SQL dans les logs
     });
 
     console.log('Connexion à la base de données établie avec Sequelize.');
 
+    // Synchronisation des tables
     await sequelize.sync({ alter: true });
     console.log('Les tables ont été synchronisées avec succès.');
 

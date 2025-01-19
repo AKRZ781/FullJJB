@@ -39,7 +39,7 @@ export const authenticateToken = async (req, res, next) => {
           );
 
           res.cookie('token', newToken, {
-            httpOnly: false,
+            httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'Lax',
             path: '/',

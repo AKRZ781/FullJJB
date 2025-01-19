@@ -29,7 +29,6 @@ db.authenticate()
 db.sync({ alter: true })
   .then(async () => {
     console.log('Database synchronized...');
-    await createAdminUser();
   })
   .catch(err => console.error('Error synchronizing the database:', err));
 

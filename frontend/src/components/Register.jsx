@@ -11,7 +11,7 @@ function Register() {
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
-  const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = process.env.VITE_API_URL;
 
   const validateName = (name) => {
     const regex = /^[a-zA-Z\s]+$/;
