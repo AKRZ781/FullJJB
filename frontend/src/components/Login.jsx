@@ -13,7 +13,7 @@ function Login() {
   axios.defaults.withCredentials = true;
   axios.defaults.headers.post['Content-Type'] = 'application/json';
 
-  const apiUrl = process.env.VITE_API_URL;
+  const apiUrl = import.meta.env.VITE_API_URL;
 
 
   const togglePasswordVisibility = () => {
