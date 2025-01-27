@@ -26,7 +26,6 @@ const setupSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log(`User connected: ${socket.id}`);
 
     socket.on("fetch_messages", async () => {
       try {
@@ -65,7 +64,6 @@ const setupSocket = (server) => {
     });
 
     socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
     });
   });
 

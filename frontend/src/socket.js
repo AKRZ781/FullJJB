@@ -8,14 +8,13 @@ export const initializeSocket = (token) => {
     return null;
   }
 
-  socket = io("http://localhost:8081", {
+  socket = io(process.env.VITE_API_URL, {
     transports: ["websocket"],
     auth: { token },
     withCredentials: true,
   });
 
   socket.on("connect", () => {
-    console.log("Socket connected:", socket.id);
   });
 
   socket.on("connect_error", (err) => {

@@ -28,7 +28,6 @@ const Chat = () => {
 
     // Initialise le socket après la vérification de l'authentification
     socket = initializeSocket(token);
-    console.log("initialisation",socket);
     
 
     if (socket) {
@@ -42,7 +41,6 @@ const Chat = () => {
     });}
 
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
     });
 
     socket.on("new_chat_message", (msg) => {
@@ -92,7 +90,6 @@ const Chat = () => {
     const cookie = document.cookie
       .split("; ")
       .find((row) => row.startsWith(`${cookieName}=`));
-    console.log("Cookie trouvé:", cookie);
     return cookie ? cookie.split("=")[1] : null;
   };
 
@@ -180,11 +177,9 @@ const Chat = () => {
   };
 
   const handleNewMessageSubmit = (e) => {
-    console.log("BLALALAsubmitLALALAL");
     e.preventDefault();
     if (!newMessage.trim()) return;
     const socket = getSocket();
-    console.log("socket",socket);
     
     // Envoi du message via Socket.IO
     if (socket) {

@@ -1,4 +1,3 @@
-// server.js
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -9,7 +8,6 @@ import techniquesRoutes from './routes/techniquesRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import adminRoutes from './routes/adminRoutes.js'; // Import des routes admin
 import db from './config/db.js';
-import createAdminUser from './config/createAdminUser.js'; // Import création admin
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
@@ -63,8 +61,6 @@ app.get('/video/:filename', (req, res) => {
 // Log des cookies et en-têtes (dev uniquement)
 if (process.env.NODE_ENV === 'development') {
   app.use((req, res, next) => {
-    console.log('Cookies: ', req.cookies);
-    console.log('Headers: ', req.headers);
     next();
   });
 }
