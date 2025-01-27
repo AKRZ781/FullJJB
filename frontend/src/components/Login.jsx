@@ -26,8 +26,6 @@ function Login() {
       setErrorMessage('Veuillez remplir tous les champs.');
       return;
     }
-    console.log('Valeur de VITE_API_URL:', import.meta.env.VITE_API_URL);
-    console.log('URL utilisée pour la requête:', `${apiUrl}/api/auth/login`);
 
     try {
       const res = await axios.post(`${apiUrl}/api/auth/login`, values, {
@@ -39,9 +37,6 @@ function Login() {
 
       if (res.data.Status === 'Success') {
         localStorage.setItem('token', res.data.token);
-        console.log('Rôle de l\'utilisateur:', res.data.user.role);
-        console.log("Cookies juste après connexion depuis le doc:", document.cookie);
-        console.log("Token reçu depuis la réponse:", res.data.token);
         navigate('/enter', { state: { userName: res.data.user.name } });
       } else {
         setErrorMessage(res.data.Error);
