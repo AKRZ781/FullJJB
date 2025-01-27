@@ -8,7 +8,7 @@ export const initializeSocket = (token) => {
     return null;
   }
 
-  socket = io(process.env.VITE_API_URL, {
+  socket = io( import.meta.env.VITE_API_URL, {
     transports: ["websocket"],
     auth: { token },
     withCredentials: true,
