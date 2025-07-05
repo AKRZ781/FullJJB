@@ -70,6 +70,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/techniques', techniquesRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/admin', adminRoutes); // Routes admin ajoutées
+app.use('/uploads', express.static('uploads'));
 
 // Route racine
 app.get('/', (req, res) => {

@@ -1,6 +1,8 @@
 import Technique from '../models/techniquesModel.js';
 import { body, validationResult } from 'express-validator';
 
+const apiUrl = process.env.API_URL;
+
 // Récupérer toutes les techniques
 const getAllTechniques = async (req, res) => {
   try {
@@ -40,7 +42,7 @@ const createTechnique = [
     }
 
     const { title, description } = req.body;
-    const videoUrl = req.file ? `/video/${req.file.filename}` : null; // Chemin de la vidéo
+    const videoUrl = req.file ? ${apiUrl}uploads/${req.file.filename} : null; // Chemin de la vidéo
 
     try {
       const newTechnique = await Technique.create({ title, description, videoUrl });
