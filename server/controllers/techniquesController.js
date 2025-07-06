@@ -44,6 +44,7 @@ const createTechnique = [
     const { title, description } = req.body;
 
     const videoUrl = req.file ? `${apiUrl}uploads/${req.file.filename}` : null;
+    console.log('Video URL:', videoUrl);
 
     try {
       const newTechnique = await Technique.create({ title, description, videoUrl });
