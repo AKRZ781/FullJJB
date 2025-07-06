@@ -1,7 +1,7 @@
 import Technique from '../models/techniquesModel.js';
 import { body, validationResult } from 'express-validator';
 
-const apiUrl = process.env.API_URL;
+const apiUrl = process.env.VITE_API_URL;
 
 // Récupérer toutes les techniques
 const getAllTechniques = async (req, res) => {
@@ -42,6 +42,7 @@ const createTechnique = [
     }
 
     const { title, description } = req.body;
+
 
     const videoUrl = req.file ? `${apiUrl}uploads/${req.file.filename}` : null;
     console.log('Video URL:', videoUrl);
