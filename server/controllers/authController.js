@@ -1,4 +1,4 @@
-import User from '../models/userModel.js';
+import UserDAO from '../dao/userDao.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -17,14 +17,12 @@ const generateRefreshToken = (user) => {
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const userExists = await User.findOne({ where: { email } });
+    const userExists = await UserDAO.findByEmail(email);
     if (userExists) {
       return res.status(400).json({ Error: "Cet e-mail est déjà utilisé." });
     }
 
-    const user = await User.create({ name, email, password: hashedPassword, confirmed: false });
+    const user = await UserDAO.createUser(name,email,password);
 
     const token = generateAccessToken({ email, id: user.id });
     const refreshToken = generateRefreshToken({ email, id: user.id });
@@ -52,7 +50,7 @@ export const confirmEmail = async (req, res) => {
   const { token } = req.params;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findOne({ where: { id: decoded.id, email: decoded.email } });
+    const user = await UserDAO.findById(decoded.id);
 
     if (!user) {
       return res.status(400).json({ Error: "Utilisateur non trouvé" });
@@ -74,7 +72,7 @@ export const confirmEmail = async (req, res) => {
 export const login = async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await UserDAO.findByEmail(email);
     if (!user) {
       return res.status(401).json({ Error: "Email incorrect ou non enregistré." });
     }
@@ -154,19 +152,18 @@ export const whoAmI = async (req, res) => {
     if (err) {
       return res.status(401).json({ Status: "Error", Message: "Token invalide" });
     }
-
-    const user = await User.findOne({ where: { id: decoded.id } });
+    const user = await UserDAO.findById(decoded.id);
     if (!user) {
       return res.status(404).json({ Status: "Error", Message: "Utilisateur non trouvé" });
     }
-
     return res.status(200).json({ Status: "Success", User: user });
   });
 };
 
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'role'] });
+    const users = await UserDAO.findAll();
+    console.log("users trouvés :", users);
     res.status(200).json({ Status: 'Success', Users: users });
   } catch (error) {
     res.status(500).json({ Error: 'Échec de la récupération des utilisateurs' });

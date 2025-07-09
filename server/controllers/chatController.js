@@ -1,21 +1,10 @@
-// controllers/chatController.js
-import ChatMessage from '../models/chatModel.js'; // Importation du modèle de message de chat
-import User from '../models/userModel.js'; // Importation du modèle utilisateur
+import ChatDAO from '../dao/chatDao.js';
 
 // Fonction pour récupérer les messages de chat
 export const getChatMessages = async (req, res) => {
   try {
     // Récupération de tous les messages de chat, avec les informations sur l'expéditeur
-    const messages = await ChatMessage.findAll({
-      include: [
-        {
-          model: User,
-          as: 'sender', // Alias pour l'expéditeur
-          attributes: ['id', 'name'] // On récupère l'id et le nom de l'expéditeur
-        }
-      ],
-      order: [['createdAt', 'ASC']] // Tri des messages par date de création dans l'ordre croissant
-    });
+    const messages = await ChatDAO.findAll();
     console.log('Fetched chat messages:', messages);
     // Envoi des messages au client avec un statut de succès
     res.status(200).json({ Status: 'Success', Messages: messages });
@@ -32,18 +21,9 @@ export const createChatMessage = async (req, res) => {
 
   try {
     // Création d'un nouveau message de chat
-    const newMessage = await ChatMessage.create({ sender_id, message });
+    const newMessage = await ChatDAO.createMessage(sender_id, message);
     // Récupération du message créé avec les informations de l'expéditeur
-    const messageWithSender = await ChatMessage.findOne({
-      where: { id: newMessage.id },
-      include: [
-        {
-          model: User,
-          as: 'sender', // Alias pour l'expéditeur
-          attributes: ['id', 'name'] // On récupère l'id et le nom de l'expéditeur
-        }
-      ]
-    });
+    const messageWithSender = await ChatDAO.findById(newMessage.id);
 
     // Récupération de l'instance de Socket.IO depuis l'application
     const io = req.app.get('io');
@@ -70,7 +50,7 @@ export const deleteChatMessage = async (req, res) => {
 
   try {
     // Recherche du message à supprimer
-    const message = await ChatMessage.findOne({ where: { id } });
+    const message = await ChatDAO.findById(id);
     if (!message) {
       console.log('Message not found or not authorized for deletion:', id);
       return res.status(404).json({ Error: 'Message not found or not authorized' });

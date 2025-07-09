@@ -1,12 +1,12 @@
 import Technique from '../models/techniquesModel.js';
 import { body, validationResult } from 'express-validator';
+import TechniqueDAO from "../dao/techniqueDao.js";
 
 const apiUrl = process.env.VITE_API_URL;
-
 // Récupérer toutes les techniques
 const getAllTechniques = async (req, res) => {
   try {
-    const techniques = await Technique.findAll(); // Récupère toutes les techniques
+    const techniques = await TechniqueDAO.findAll(); // Récupère toutes les techniques
     res.status(200).json(techniques); // Envoie directement les données
   } catch (error) {
     console.error('Erreur lors de la récupération des techniques :', error);
@@ -18,7 +18,7 @@ const getAllTechniques = async (req, res) => {
 const getTechniqueById = async (req, res) => {
   const { id } = req.params;
   try {
-    const technique = await Technique.findByPk(id); // Recherche par ID
+    const technique = await TechniqueDAO.findById(id); // Recherche par ID
     if (technique) {
       res.status(200).json(technique);
     } else {
@@ -42,13 +42,11 @@ const createTechnique = [
     }
 
     const { title, description } = req.body;
-
-
-    const videoUrl = req.file ? `${apiUrl}uploads/${req.file.filename}` : null;
-    console.log('Video URL:', videoUrl);
+    const videoUrl = req.file ? `${apiUrl}uploads/${req.file.filename}` : null; // Chemin de la vidéo
+    console.log('videoUrl: ', videoUrl);
 
     try {
-      const newTechnique = await Technique.create({ title, description, videoUrl });
+      const newTechnique = await TechniqueDAO.createTechnique(title, description, videoUrl);
       res.status(200).json({ Status: 'Success', Message: 'Technique ajoutée avec succès', Data: newTechnique });
     } catch (error) {
       console.error('Erreur lors de la création de la technique :', error);
@@ -65,10 +63,10 @@ const updateTechnique = [
   async (req, res) => {
     const { id } = req.params;
     const { title, description } = req.body;
-    const videoUrl = req.file ? `/video/${req.file.filename}` : undefined;
+    const videoUrl = req.file ? `${apiUrl}uploads/${req.file.filename}` : null; 
 
     try {
-      const technique = await Technique.findByPk(id);
+      const technique = await TechniqueDAO.findById(id);
       if (technique) {
         // Mise à jour des champs existants
         if (title) technique.title = title;
@@ -91,7 +89,7 @@ const updateTechnique = [
 const deleteTechnique = async (req, res) => {
   const { id } = req.params;
   try {
-    const technique = await Technique.findByPk(id);
+    const technique =  await TechniqueDAO.findById(id);
     if (technique) {
       await technique.destroy(); // Suppression
       res.status(200).json({ Status: 'Success', Message: 'Technique supprimée avec succès' });
