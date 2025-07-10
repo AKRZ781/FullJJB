@@ -2,8 +2,8 @@ import UserModel from '../models/userModel.js';
 import bcrypt from "bcrypt";
 
 const UserDAO = {
-    createUser(name,email,password){
-        const hashedPassword = bcrypt.hash(password, 10);
+    async createUser(name,email,password){
+        const hashedPassword = await bcrypt.hash(password, 10);
         return UserModel.create({ name, email, password: hashedPassword, confirmed: false });
     },
     findAll() {
